@@ -32,42 +32,58 @@ for u=1:Nnum
     end
 end
 
-% Load spatial angular components
-if VsNet_Enabled == 1
-    Nshift=3;  % the sampling points of a single scanning period
-    maxIter=10;% the maximum iteration number of single frame
-    WDF=zeros(363,363,Nnum,Nnum);
-    for u=1:Nnum
-        for v=1:Nnum
-            tmp=single(imread(['Data/SR/mito_SR.tif'],(u-1)*Nnum+v));
-            WDF(:,:,u,v)=tmp(97:459,70:432); %% content-aware FOV
-        end
-    end
-else
-    Nshift=1;  % the sampling points of a single scanning period
-    maxIter=1; % the maximum iteration number of single frame
-    WDF=zeros(121,121,Nnum,Nnum);
-    for u=1:Nnum
-        for v=1:Nnum
-            tmp=single(imread(['Data/LR/mito_LR.tif'],(u-1)*Nnum+v));
-            WDF(:,:,u,v)=tmp(33:153,24:144); %% content-aware FOV
-        end
-    end
-end
+% List all SR files in the input directory
+inputFolder = 'Output/VSLFM/SR';
+outputFolder = 'Output//VSLFM_ps51/Reconstruction/SR_paper';
+mkdir(outputFolder);
+
+files = dir(fullfile(inputFolder, '*.tif'));
+
+for fileIdx = 1:length(files)
+    inputFile = fullfile(inputFolder, files(fileIdx).name);
+    fprintf('Processing: %s\n', inputFile);
     
-% Initialization
-WDF=imresize(WDF,[size(WDF,1)*Nnum/Nshift,size(WDF,2)*Nnum/Nshift]);
-Xguess=ones(size(WDF,1),size(WDF,2),size(psf,5));
-Xguess=Xguess./sum(Xguess(:)).*sum(WDF(:))./(size(WDF,3)*size(WDF,4));
+    % Load spatial angular components
+    if VsNet_Enabled == 1
+        Nshift=3;
+        maxIter=10;
+        WDF=zeros(363,363,Nnum,Nnum);
+        for u=1:Nnum
+            for v=1:Nnum
+                tmp=single(imread(inputFile, (u-1)*Nnum+v));
+                WDF(:,:,u,v)=tmp(97:459,70:432);
+            end
+        end
+    else
+        Nshift=1;
+        maxIter=1;
+        WDF=zeros(121,121,Nnum,Nnum);
+        for u=1:Nnum
+            for v=1:Nnum
+                tmp=single(imread(inputFile, (u-1)*Nnum+v));
+                WDF(:,:,u,v)=tmp(33:153,24:144);
+            end
+        end
+    end
 
-% 3D Reconstruction
-tic;
-Xguess = deconvRL(maxIter, Xguess,WDF, psf, weight, DAO, Nb, GPUcompute);
-ttime = toc;
+    % Initialization
+    WDF=imresize(WDF,[size(WDF,1)*Nnum/Nshift,size(WDF,2)*Nnum/Nshift]);
+    Xguess=ones(size(WDF,1),size(WDF,2),size(psf,5));
+    Xguess=Xguess./sum(Xguess(:)).*sum(WDF(:))./(size(WDF,3)*size(WDF,4));
 
-% Save high-resolution reconstructed volume
-mkdir('Data/Reconstruction');
-imwriteTFSK(single(gather(Xguess(545:1295,20:1260,21:51))),['Data/Reconstruction/mito_Recon.tif']);  %% crop volume edge and save it
+    % 3D Reconstruction
+    tic;
+    Xguess = deconvRL(maxIter, Xguess, WDF, psf, weight, DAO, Nb, GPUcompute);
+    ttime = toc;
+    fprintf('Reconstruction completed in %.2f seconds\n', ttime);
+    
+    % Save high-resolution reconstructed volume
+    outputFile = fullfile(outputFolder, ['Recon_' files(fileIdx).name]);
+    imwriteTFSK(single(gather(Xguess(545:1295,20:1260,21:51))), outputFile);
+    fprintf('Saved: %s\n', outputFile);
+end
+
+fprintf('Processing complete.\n');
 
 
 
