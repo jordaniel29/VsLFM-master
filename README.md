@@ -1,8 +1,11 @@
-# VsLFM-master
+# VsLFM-master [Forked]
 
-Version:    3.1
-
-Lisence: GNU General Public License v2.0
+This is a forked repo of the [VsLFM-master](https://github.com/THU-IBCS/VsLFM-master/tree/main) repository 
+Some changes in this repo include:
+1. Changing the format of the dataset (only use the mitochondria dataset) and adding train, val, test split to the dataset
+2. Add code to calculate the PSNR & SSIM of the results
+3. Reformat the patching 
+<br>TODO: change the algorithm of patching so that all cases are covered. Currently there are some cases of patching that is not handled (e.g patch size of 25 for testing and validation)
 
 # Overview
 
